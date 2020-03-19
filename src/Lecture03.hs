@@ -297,8 +297,14 @@ module Lecture03 where
     - not true -> not (λa.λb.a) ->> λa.λb.b
     - not false ->> true
 -}
+-- true :: String
+-- true = "\\a.\\b.a"
+-- false :: String
+-- false = "\\a.\\b.b"
+-- ifelse :: String
+-- ifelse = "\\x.x"
 not :: String
-not = "notimplemented"
+not = "\\y.ifelse y false true"
 
 {-
   Напишите терм `and`:
@@ -309,7 +315,7 @@ not = "notimplemented"
     - and false false ->> false
 -}
 and :: String
-and = "notimplemented"
+and = "\\x.\\y.ifelse x (ifelse y true false) false"
 
 {-
   Напишите терм `or`:
@@ -320,7 +326,7 @@ and = "notimplemented"
     - or false false ->> false
 -}
 or :: String
-or = "notimplemented"
+or = "\\x.\\y.ifelse x true (ifelse y true false)"
 -- </Задачи для самостоятельного решения>
 
 {-
@@ -373,7 +379,7 @@ or = "notimplemented"
   isZero n = False
 -}
 isZero :: String
-isZero = "notimplemented"
+isZero = "\\n.n (\\x.false) true"
 
 -- </Задачи для самостоятельного решения>
 
@@ -459,7 +465,8 @@ isZero = "notimplemented"
   Что она возвращает? Чему равен pred pred 1?
 -}
 fib :: String
-fib = "notimplemented"
+-- fib = "\\n.ifelse (\\m.m (\\x.false) true m) 0 (plus (fib (pred n)) (fib (pred (pred n))))"
+fib = "(\\x.\\y.y (x x y)) (\\x.\\y.y (x x y)) (\\f.\\n.ifelse ((\\m.m (\\x.false) true) n) (1) (ifelse ((\\m.m (\\x.false) true) (pred n)) (2) (plus (f (pred n)) (f (pred (pred n))))))"
 
 -- </Задачи для самостоятельного решения>
 
