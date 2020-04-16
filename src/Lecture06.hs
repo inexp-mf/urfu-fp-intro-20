@@ -130,6 +130,14 @@ module Lecture06 where
   если нет, то докажите это (напишите, почему)
 
   *Решение*
+  Не существует.
+
+  x x : T ⊢ x : T1 -> T, где T1 - некоторый тип, которому принадлежит x
+  x : T1
+  T1 = (T1 -> T) = ((T1 -> T) -> T) = ...
+  Если рассмотреть грамматику с правилом T1 -> "T1 -> T", то Т1 будет нетерминалом, а язык грамматики будет пустым. 
+  То есть если тип Т1 не базовый, то x не имеет типа. А он не базовый, так как имеет вид (T1 -> T).
+  Не знаю, насколько это строго.
 -}
 -- </Задачи для самостоятельного решения>
 
@@ -326,7 +334,13 @@ module Lecture06 where
   Убедитесь, что selfApp работает. Приведите терм `selfApp id` в нормальную форму
   и запишите все шаги β-редукции ->β.
 
-  selfApp id = ... ->β ...
+  selfApp id = (λx:∀X.X->X.x [∀X.X->X] x) (id:∀X.X->X) 
+          ->β (id:∀X.X->X) [∀X.X->X] (id:∀X.X->X) 
+          ->β (id:(∀X.X->X)->(∀X.X->X)) (id:∀X.X->X)  // тут уже видим, что id применяется к id; распишем id для конкретного типа
+            = (λx:∀X.X->X.x) (id:∀X.X->X) // тип подходит, можно делать аппликацию 
+          ->β (id:∀X.X->X)
+
+
 -}
 -- </Задачи для самостоятельного решения>
 
@@ -578,16 +592,16 @@ module Lecture06 where
 -}
 
 f :: [a] -> Int
-f = error "not implemented"
+f = length
 
 g :: (a -> b)->[a]->[b]
-g = error "not implemented"
+g = map
 
 q :: a -> a -> a
-q x y = error "not implemented"
+q x y = x
 
 p :: (a -> b) -> (b -> c) -> (a -> c)
-p f g = error "not implemented"
+p f g = g . f
 
 {-
   Крестики-нолики Чёрча.
@@ -624,7 +638,10 @@ createRow x y z = \case
   Third -> z
 
 createField :: Row -> Row -> Row -> Field
-createField x y z = error "not implemented"
+createField x y z = \case
+  First -> x
+  Second -> y
+  Third -> z
 
 -- Чтобы было с чего начинать проверять ваши функции
 emptyField :: Field
@@ -633,17 +650,44 @@ emptyField = createField emptyLine emptyLine emptyLine
     emptyLine = createRow Empty Empty Empty
 
 setCellInRow :: Row -> Index -> Value -> Row
-setCellInRow r i v = error "not implemented"
+setCellInRow r i v = \j -> if i == j then v else (r j)
 
 -- Возвращает новое игровое поле, если клетку можно занять.
 -- Возвращает ошибку, если место занято.
 setCell :: Field -> Index -> Index -> Value -> Either String Field
-setCell field i j v = error "not implemented"
+setCell field i j v = if field i j == Empty 
+  then Right(\row -> \col -> if i /= row || j /= col then field row col else v) 
+  else Left("There is '"++(show (field i j))++"' on "++(show i)++" "++(show j))
 
 data GameState = InProgress | Draw | XsWon | OsWon deriving (Eq, Show)
 
+indexes :: [Index]
+indexes = [First, Second, Third]
+
+checkSeq :: [Value] -> Bool -> Bool -> Bool -> GameState
+checkSeq [] hasX hasO hasEmpty  = if hasEmpty then InProgress else if hasX then XsWon else OsWon
+checkSeq (v : tail) hasX hasO hasEmpty = case v of
+  Zero -> if hasX then Draw else checkSeq tail False True hasEmpty
+  Cross -> if hasO then Draw else checkSeq tail True False hasEmpty
+  Empty -> checkSeq tail hasX hasO True
+
+getLines :: Field -> [[Value]]
+getLines f = 
+  [f i i | i <- indexes] : 
+  ([f i j | (i, j) <- zip indexes (reverse indexes)] :
+  [[f i j | j <- indexes] | i <- indexes] ++ 
+  [[f j i | j <- indexes] | i <- indexes])  
+
+
+_getGameState :: [[Value]] -> Bool -> GameState
+_getGameState [] hasInProgress = if hasInProgress then InProgress else Draw
+_getGameState (line : lines) hasInProgress =  let gs = checkSeq line False False False in case gs of
+  InProgress -> _getGameState lines True
+  Draw -> _getGameState lines hasInProgress
+  _ -> gs
+
 getGameState :: Field -> GameState
-getGameState field = error "not implemented"
+getGameState field = _getGameState (getLines field) False
 
 -- </Задачи для самостоятельного решения>
 
