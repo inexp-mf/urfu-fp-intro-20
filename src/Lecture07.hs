@@ -65,16 +65,42 @@ data Expr
   | Abs Expr
   deriving Eq
 
+enclose :: Expr -> String -> String -> String
+enclose e open close = open ++ (show e) ++ close
+
+enbracket :: Expr -> String
+enbracket e = enclose e "(" ")"
+
+infixApply :: Expr -> String -> Expr -> String
+infixApply e1 op e2 = enbracketIfComplex e1 ++ " " ++ op ++ " " ++ enbracketIfComplex e2
+
+enbracketIfComplex :: Expr -> String
+enbracketIfComplex (Number n) = show n
+enbracketIfComplex (Abs e) = show (Abs e)
+enbracketIfComplex e = enbracket e
+
+instance Show Expr where
+  show (Number num)   = show num
+  show (Plus e1 e2)   = infixApply e1 "+" e2
+  show (Minus e1 e2)  = infixApply e1 "-" e2
+  show (Mult e1 e2)   = infixApply e1 "*" e2
+  show (UnaryMinus e) = "-" ++ enbracketIfComplex e
+  show (Abs e)        = enclose e "|" "|"
+
 {-
   Реализуйте instance Semigroup для вектора:
 -}
 newtype Vec a = Vec { unVec :: [a] } deriving (Eq, Show)
 
+instance Semigroup (Vec Integer) where
+  Vec x <> Vec y = Vec (zipWith (+) x y)
 {-
   Реализуйте instance Semigroup для типа для логгирования:
 -}
 newtype LogEntry = LogEntry { unLogEntry :: String } deriving (Eq, Show)
 
+instance Semigroup LogEntry where
+  LogEntry x <> LogEntry y = LogEntry (x ++ y)
 {-
   В `src/Lecture07/Money.hs` определены:
     - тип `Money a` для денег
@@ -83,21 +109,37 @@ newtype LogEntry = LogEntry { unLogEntry :: String } deriving (Eq, Show)
 
   Реализуйте инстансы Semigroup для Money a.
 -}
+instance Semigroup (Money USD) where
+  x <> y = mkDollars (getMoney x + getMoney y)
+
+instance Semigroup (Money RUB) where
+  x <> y = mkRubbles (getMoney x + getMoney y)
 
 {-
   Реализуйте инстанс Functor для ExactlyOne
 -}
 data ExactlyOne a = ExactlyOne a deriving (Eq, Show)
 
+instance Functor ExactlyOne where
+  fmap f (ExactlyOne x) = ExactlyOne (f x)
+
 {-
   Реализуйте инстанс Functor для `Maybe a`
 -}
 data Maybe' a = Just' a | Nothing' deriving (Eq, Show)
 
+instance Functor Maybe' where
+  fmap _ Nothing' = Nothing'
+  fmap f (Just' x) = Just' (f x)
+
 {-
   Реализуйте инстанс Functor для `List a`
 -}
 data List a = Nil | Cons a (List a) deriving (Eq, Show)
+
+instance Functor List where
+  fmap _ Nil = Nil
+  fmap f (Cons x xs) = Cons (f x) (fmap f xs)
 
 {-
   `FileTree a` — тип для представления дерева файловой системы.
@@ -146,7 +188,9 @@ latestModified = getMax . foldMap (\FileInfo{..} -> Max modified)
 -}
 
 instance Foldable FileTree where
-  foldMap = undefined
+  foldMap _ Empty = mempty
+  foldMap f (File _ a) = f a
+  foldMap f (Dir _ content) = mconcat (map (foldMap f) content)
 
 {-
   В этом задании вам необходимо придумать и написать иерархию исключений
@@ -163,5 +207,20 @@ instance Foldable FileTree where
 
   Реализовывать инстансы не нужно.
 -}
+data Severity = Debug | Info | Error | Warn deriving (Eq, Show)
+data Json = Json String
+
+class Exception e where
+  message :: e -> String
+
+class Exception e => ApiException e where
+  json :: e -> Json
+  severity :: e -> Severity
+
+class Exception e => DBException e where
+  dbMessage :: e -> String
+
+class Exception e => DomainException e where
+  context :: e -> String
 
 -- </Задачи для самостоятельного решения>
